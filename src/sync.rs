@@ -41,7 +41,7 @@ impl FakeTime {
     }
     pub fn wait_exact_sleepers_count(&self, count: usize) {
         let (tx, rx) = mpsc::channel();
-        let waiter = SleepWaiter { count, chan: tx };
+        let waiter = SleepWaiter { count, signal: tx };
         self.0.lock().unwrap().add_sleep_waiter(waiter);
         rx.recv().unwrap();
     }
@@ -65,7 +65,7 @@ impl Time for FakeTime {
         {
             let sleeper = Sleeper {
                 monotonic: dst,
-                chan: tx,
+                signal: tx,
             };
 
             self.0.lock().unwrap().add_sleeper(sleeper);

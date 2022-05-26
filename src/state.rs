@@ -8,12 +8,12 @@ pub(crate) trait Signal {
 
 pub(crate) struct Sleeper<S: Signal> {
     pub(crate) monotonic: Instant,
-    pub(crate) chan: S,
+    pub(crate) signal: S,
 }
 
 pub(crate) struct SleepWaiter<S: Signal> {
     pub(crate) count: usize,
-    pub(crate) chan: S,
+    pub(crate) signal: S,
 }
 
 pub(crate) struct FakeTimeState<S: Signal> {
@@ -59,7 +59,7 @@ impl<S: Signal> FakeTimeState<S> {
         loop {
             if let Some(earliest) = self.sleepers.front() {
                 if earliest.monotonic <= self.monotonic {
-                    earliest.chan.signal();
+                    earliest.signal.signal();
                     self.sleepers.pop_front();
                     self.fire_sleep_waiters();
                 } else {
@@ -78,7 +78,7 @@ impl<S: Signal> FakeTimeState<S> {
             let index = waiters_count - k - 1;
             if self.sleep_waiters[index].count == sleepers_count {
                 let waiter = self.sleep_waiters.remove(index);
-                waiter.chan.signal();
+                waiter.signal.signal();
             }
         }
     }
