@@ -1,26 +1,29 @@
 use std::collections::VecDeque;
 use std::ops::Add;
-use std::sync::mpsc::Sender;
 use std::time::{Duration, Instant, SystemTime};
 
-pub(crate) struct Sleeper {
+pub(crate) trait Signal {
+    fn signal(&self);
+}
+
+pub(crate) struct Sleeper<S: Signal> {
     pub(crate) monotonic: Instant,
-    pub(crate) chan: Sender<()>,
+    pub(crate) chan: S,
 }
 
-pub(crate) struct SleepWaiter {
+pub(crate) struct SleepWaiter<S: Signal> {
     pub(crate) count: usize,
-    pub(crate) chan: Sender<()>,
+    pub(crate) chan: S,
 }
 
-pub(crate) struct FakeTimeState {
+pub(crate) struct FakeTimeState<S: Signal> {
     monotonic: Instant,
     real: SystemTime,
-    sleepers: VecDeque<Sleeper>,
-    sleep_waiters: Vec<SleepWaiter>,
+    sleepers: VecDeque<Sleeper<S>>,
+    sleep_waiters: Vec<SleepWaiter<S>>,
 }
 
-impl FakeTimeState {
+impl<S: Signal> FakeTimeState<S> {
     pub(crate) fn monotonic(&self) -> Instant {
         return self.monotonic;
     }
@@ -29,7 +32,7 @@ impl FakeTimeState {
         return self.real;
     }
 
-    pub(crate) fn add_sleeper(&mut self, waiter: Sleeper) {
+    pub(crate) fn add_sleeper(&mut self, waiter: Sleeper<S>) {
         match self
             .sleepers
             .binary_search_by(|item| item.monotonic.cmp(&waiter.monotonic))
@@ -40,7 +43,7 @@ impl FakeTimeState {
         self.fire_sleepers();
     }
 
-    pub(crate) fn add_sleep_waiter(&mut self, waiter: SleepWaiter) {
+    pub(crate) fn add_sleep_waiter(&mut self, waiter: SleepWaiter<S>) {
         self.sleep_waiters.push(waiter);
         self.fire_sleep_waiters();
     }
@@ -56,7 +59,7 @@ impl FakeTimeState {
         loop {
             if let Some(earliest) = self.sleepers.front() {
                 if earliest.monotonic <= self.monotonic {
-                    earliest.chan.send(()).ok();
+                    earliest.chan.signal();
                     self.sleepers.pop_front();
                     self.fire_sleep_waiters();
                 } else {
@@ -75,13 +78,13 @@ impl FakeTimeState {
             let index = waiters_count - k - 1;
             if self.sleep_waiters[index].count == sleepers_count {
                 let waiter = self.sleep_waiters.remove(index);
-                let _ = waiter.chan.send(());
+                waiter.chan.signal();
             }
         }
     }
 }
 
-impl Default for FakeTimeState {
+impl<S: Signal> Default for FakeTimeState<S> {
     fn default() -> Self {
         return FakeTimeState {
             monotonic: Instant::now(),

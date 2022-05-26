@@ -1,5 +1,6 @@
-use crate::state::{FakeTimeState, SleepWaiter, Sleeper};
+use crate::state::{FakeTimeState, Signal, SleepWaiter, Sleeper};
 use std::ops::Add;
+use std::sync::mpsc::Sender;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
@@ -32,7 +33,7 @@ impl Time for RealTime {
 }
 
 #[derive(Clone)]
-pub struct FakeTime(Arc<Mutex<FakeTimeState>>);
+pub struct FakeTime(Arc<Mutex<FakeTimeState<Sender<()>>>>);
 
 impl FakeTime {
     pub fn advance(&self, d: Duration) {
@@ -95,7 +96,7 @@ mod test {
         let handler = thread::spawn(move || {
             clock2.sleep_until(dst);
             assert_eq!(dst, clock2.monotonic_now());
-            thread_worked2.store(true, Ordering::Relaxed);
+            thread_worked2.store(true, Relaxed);
         });
 
         clock.advance(Duration::from_secs(60));
@@ -113,11 +114,17 @@ mod test {
         let handler = thread::spawn(move || {
             clock2.sleep(Duration::from_secs(60));
             assert_eq!(dst, clock2.monotonic_now());
-            thread_worked2.store(true, Ordering::Relaxed);
+            thread_worked2.store(true, Relaxed);
         });
         clock.wait_exact_sleepers_count(1);
         clock.advance(Duration::from_secs(60));
         handler.join().unwrap();
         assert_eq!(true, thread_worked.load(Relaxed));
+    }
+}
+
+impl Signal for Sender<()> {
+    fn signal(&self) {
+        let _ = self.send(());
     }
 }
