@@ -2,6 +2,8 @@
 name = "devtime"
 version = "0.1.0"
 edition = "2021"
+description = "Wrappers for real and fake time for use same code for fast time tests and for real time in production"
+license="Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
