@@ -1,6 +1,6 @@
 [package]
 name = "devtime"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Wrappers for real and fake time for use same code for fast time tests and for real time in production"
 license="Apache-2.0"
