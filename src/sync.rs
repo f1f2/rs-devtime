@@ -5,7 +5,7 @@ use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 
-trait Time {
+pub trait Time {
     fn monotonic_now(&self) -> Instant;
     fn system_now(&self) -> SystemTime;
     fn sleep(&self, duration: Duration);
@@ -13,6 +13,12 @@ trait Time {
 }
 
 pub struct RealTime {}
+
+impl Default for RealTime {
+    fn default() -> Self {
+        return RealTime {};
+    }
+}
 
 impl Time for RealTime {
     fn monotonic_now(&self) -> Instant {
